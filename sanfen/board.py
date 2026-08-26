@@ -88,6 +88,35 @@ class Board:
                 r += dr
         return candidates
 
+    def clone(self):
+        return Board(list(self.squares), self.side_to_move, set(self.castling_rights),
+                     self.en_passant, self.halfmove_clock, self.fullmove_number)
+
+    def find_king(self, color):
+        target = "K" if color == "w" else "k"
+        for idx, occupant in enumerate(self.squares):
+            if occupant == target:
+                return idx
+        raise ValueError(f"no {color} king on the board")
+
+    def is_square_attacked(self, square, by_color):
+        """Whether by_color has a piece that could move to square right
+        now. Ignores whose turn it is - this is used to check for check,
+        not to validate whose move it would be."""
+        file_, rank = square % 8, square // 8
+        direction = 1 if by_color == "w" else -1
+        pawn_rank = rank - direction
+        pawn = "P" if by_color == "w" else "p"
+        if 0 <= pawn_rank < 8:
+            for df in (-1, 1):
+                f = file_ + df
+                if 0 <= f < 8 and self.squares[pawn_rank * 8 + f] == pawn:
+                    return True
+        for piece in ("N", "B", "R", "Q", "K"):
+            if self.find_candidates(piece, by_color, square):
+                return True
+        return False
+
     def find_pawn_candidates(self, color, dest, capture, disambig_file):
         direction = 1 if color == "w" else -1
         dest_file, dest_rank = dest % 8, dest // 8

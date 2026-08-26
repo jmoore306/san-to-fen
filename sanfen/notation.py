@@ -1,9 +1,8 @@
 """Parsing and application of Standard Algebraic Notation (SAN) move text.
 
-This handles the notation itself and geometric move resolution. It does
-not verify that a move is legal in the full chess sense (it will not
-catch a move that leaves the mover's own king in check) - see the
-README for the current scope.
+This handles the notation itself, geometric move resolution, and rejects
+moves that leave the mover's own king in check. It does not yet reject
+castling through or out of check - see the README for the current scope.
 """
 
 import re
@@ -113,4 +112,16 @@ def apply_san(board, raw_token):
 
     frm = candidates[0]
     is_en_passant = piece == "P" and capture and board.squares[dest] is None
-    board.apply(frm, dest, promotion=promotion, is_en_passant=is_en_passant)
+
+    trial = board.clone()
+    trial.apply(frm, dest, promotion=promotion, is_en_passant=is_en_passant)
+    enemy = "b" if color == "w" else "w"
+    if trial.is_square_attacked(trial.find_king(color), enemy):
+        raise ValueError(f"illegal move '{raw_token}': leaves own king in check")
+
+    board.squares = trial.squares
+    board.side_to_move = trial.side_to_move
+    board.castling_rights = trial.castling_rights
+    board.en_passant = trial.en_passant
+    board.halfmove_clock = trial.halfmove_clock
+    board.fullmove_number = trial.fullmove_number

@@ -57,20 +57,18 @@ pip install -e .
 
 ## Current scope
 
-Move resolution is purely geometric right now: it finds which piece of the
-right type can reach the destination square, including standard
-disambiguation (`Nbd2`, `R1a3`, `exd5`), captures, en passant, castling,
-and promotion. What it does **not** do yet is verify that a move is fully
-legal in the chess sense - it won't catch a move that walks a piece out of
-a pin, or a king move into check, or castling through an attacked square.
-If your move list only contains moves a real game would produce, this
-doesn't matter. If you feed it a move that's geometrically possible but
-illegal because of check, it will happily play it. See the roadmap for
-where this is headed.
+Move resolution finds which piece of the right type can reach the
+destination square, including standard disambiguation (`Nbd2`, `R1a3`,
+`exd5`), captures, en passant, castling, and promotion, and it rejects a
+move if playing it would leave the mover's own king in check (walking a
+pinned piece off its pin, moving the king into an attacked square, and
+so on). What it does **not** do yet is reject castling through or out of
+check - a castle is only checked for landing the king in check, the same
+as any other move, not for the squares it passes through. See the
+roadmap for where this is headed.
 
 ## Roadmap
 
-- Track attacked squares and reject moves that leave the mover's king in check
 - Reject castling through or out of check
 - Add a `--from-fen` flag to start from an arbitrary position instead of the initial one
 - Add a mode that takes a target square/piece and explains which SAN moves could reach it
