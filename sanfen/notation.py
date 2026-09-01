@@ -1,8 +1,8 @@
 """Parsing and application of Standard Algebraic Notation (SAN) move text.
 
 This handles the notation itself, geometric move resolution, and rejects
-moves that leave the mover's own king in check. It does not yet reject
-castling through or out of check - see the README for the current scope.
+moves that leave the mover's own king in check, including castling out of,
+through, or into check.
 """
 
 import re
@@ -43,6 +43,15 @@ def _validate_castle_path(board, color, kingside):
     for square in between:
         if board.squares[square] is not None:
             raise ValueError("castling blocked by a piece")
+
+    # The king must not start, pass through, or land on an attacked
+    # square. The rook's path isn't restricted the same way.
+    enemy = "b" if color == "w" else "w"
+    king_path = [rank * 8 + 4, rank * 8 + 5, rank * 8 + 6] if kingside \
+        else [rank * 8 + 4, rank * 8 + 3, rank * 8 + 2]
+    for square in king_path:
+        if board.is_square_attacked(square, enemy):
+            raise ValueError("cannot castle out of, through, or into check")
 
 
 def apply_san(board, raw_token):

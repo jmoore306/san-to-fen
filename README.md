@@ -62,14 +62,12 @@ destination square, including standard disambiguation (`Nbd2`, `R1a3`,
 `exd5`), captures, en passant, castling, and promotion, and it rejects a
 move if playing it would leave the mover's own king in check (walking a
 pinned piece off its pin, moving the king into an attacked square, and
-so on). What it does **not** do yet is reject castling through or out of
-check - a castle is only checked for landing the king in check, the same
-as any other move, not for the squares it passes through. See the
-roadmap for where this is headed.
+so on). Castling is checked the same way, plus the squares the king
+passes through: you can't castle out of check, through an attacked
+square, or into one, even though those squares aren't otherwise occupied.
 
 ## Roadmap
 
-- Reject castling through or out of check
 - Add a `--from-fen` flag to start from an arbitrary position instead of the initial one
 - Add a mode that takes a target square/piece and explains which SAN moves could reach it
 - Read move lists from a PGN file, not just command-line text
