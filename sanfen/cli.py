@@ -23,6 +23,11 @@ def build_arg_parser():
         action="store_true",
         help="emit machine-readable JSON instead of plain text",
     )
+    parser.add_argument(
+        "--from-fen",
+        metavar="FEN",
+        help="start from this position instead of the initial one",
+    )
     return parser
 
 
@@ -32,7 +37,24 @@ def main(argv=None):
 
     text = " ".join(args.moves)
     tokens = split_moves(text)
-    board = Board.initial()
+
+    if args.from_fen is None:
+        board = Board.initial()
+    else:
+        try:
+            board = Board.from_fen(args.from_fen)
+        except ValueError as exc:
+            if args.json:
+                print(json.dumps({
+                    "ok": False,
+                    "error": f"invalid --from-fen value: {exc}",
+                    "failed_move": None,
+                    "moves_played": [],
+                }))
+            else:
+                print(f"invalid --from-fen value: {exc}", file=sys.stderr)
+            return 1
+
     played = []
 
     for token in tokens:

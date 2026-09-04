@@ -5,6 +5,10 @@ Pieces are single characters, uppercase for white, lowercase for black,
 using the usual PNBRQK letters.
 """
 
+import re
+
+_SQUARE_RE = re.compile(r"^[a-h][1-8]$")
+
 KNIGHT_OFFSETS = [(1, 2), (2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2)]
 KING_OFFSETS = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
 BISHOP_DIRS = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
@@ -49,6 +53,58 @@ class Board:
         for file_, ch in enumerate("rnbqkbnr"):
             squares[56 + file_] = ch
         return cls(squares, "w", set("KQkq"), None, 0, 1)
+
+    @classmethod
+    def from_fen(cls, fen):
+        fields = fen.split()
+        if len(fields) != 6:
+            raise ValueError(f"FEN needs 6 space-separated fields, got {len(fields)}")
+        board_field, side, castling, ep, halfmove, fullmove = fields
+
+        ranks = board_field.split("/")
+        if len(ranks) != 8:
+            raise ValueError(f"FEN board field needs 8 ranks, got {len(ranks)}")
+
+        squares = [None] * 64
+        for rank_from_top, row in enumerate(ranks):
+            rank = 7 - rank_from_top
+            file_ = 0
+            for ch in row:
+                if ch.isdigit():
+                    file_ += int(ch)
+                elif ch in "pnbrqkPNBRQK":
+                    if file_ >= 8:
+                        raise ValueError(f"FEN rank '{row}' overflows the board")
+                    squares[rank * 8 + file_] = ch
+                    file_ += 1
+                else:
+                    raise ValueError(f"unrecognized character '{ch}' in FEN rank '{row}'")
+            if file_ != 8:
+                raise ValueError(f"FEN rank '{row}' does not sum to 8 squares")
+
+        if side not in ("w", "b"):
+            raise ValueError(f"FEN side to move must be 'w' or 'b', got '{side}'")
+
+        if castling == "-":
+            castling_rights = set()
+        else:
+            if not castling or any(c not in "KQkq" for c in castling):
+                raise ValueError(f"invalid FEN castling field '{castling}'")
+            castling_rights = set(castling)
+
+        if ep == "-":
+            en_passant = None
+        else:
+            if not _SQUARE_RE.match(ep):
+                raise ValueError(f"invalid FEN en passant square '{ep}'")
+            en_passant = square_index(ep)
+
+        if not halfmove.isdigit():
+            raise ValueError(f"invalid FEN halfmove clock '{halfmove}'")
+        if not fullmove.isdigit() or int(fullmove) < 1:
+            raise ValueError(f"invalid FEN fullmove number '{fullmove}'")
+
+        return cls(squares, side, castling_rights, en_passant, int(halfmove), int(fullmove))
 
     def find_candidates(self, piece, color, dest):
         """Squares holding a piece of the given type/color that could

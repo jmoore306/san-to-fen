@@ -41,6 +41,14 @@ $ sanfen --json "1. e4 e5 2. Nf3 Nf9"
 {"ok": false, "error": "invalid destination square in move 'Nf9'", "failed_move": "Nf9", "moves_played": ["e4", "e5", "Nf3"]}
 ```
 
+Pass `--from-fen` to start from a position other than the initial one:
+
+```
+$ sanfen --from-fen "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3" a6
+r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4
+White to move, move 4
+```
+
 ## Install
 
 No dependencies. Either run it in place:
@@ -68,6 +76,5 @@ square, or into one, even though those squares aren't otherwise occupied.
 
 ## Roadmap
 
-- Add a `--from-fen` flag to start from an arbitrary position instead of the initial one
 - Add a mode that takes a target square/piece and explains which SAN moves could reach it
 - Read move lists from a PGN file, not just command-line text
