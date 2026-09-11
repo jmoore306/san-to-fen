@@ -63,6 +63,22 @@ or install it so the `sanfen` command is on your PATH:
 pip install -e .
 ```
 
+Pass `--explain SQUARE` to ask, from the resulting position, which SAN moves
+by the side to move could put a piece on that square next:
+
+```
+$ sanfen "1. e4 e5 2. Nf3 Nc6" --explain d4
+r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3
+White to move, move 3
+moves that could reach d4: Nd4, d4
+```
+
+That includes captures, promotions (listed one per promotion piece),
+en passant, and castling when the square asked about is the king's
+landing square (`g1`, `c1`, `g8`, or `c8`). It only lists moves that are
+actually legal - if a candidate would leave the mover's own king in
+check, it's left out.
+
 ## Current scope
 
 Move resolution finds which piece of the right type can reach the
@@ -76,5 +92,5 @@ square, or into one, even though those squares aren't otherwise occupied.
 
 ## Roadmap
 
-- Add a mode that takes a target square/piece and explains which SAN moves could reach it
 - Read move lists from a PGN file, not just command-line text
+- Add a test suite for the board, notation, and CLI modules

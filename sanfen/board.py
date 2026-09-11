@@ -200,6 +200,38 @@ class Board:
 
         return candidates
 
+    def find_pawn_sources(self, color, dest):
+        """Squares holding a pawn of the given color that could reach dest
+        next move, paired with whether that move is a capture (including
+        en passant). Used to work backward from a target square rather
+        than forward from a parsed SAN token."""
+        direction = 1 if color == "w" else -1
+        dest_file, dest_rank = dest % 8, dest // 8
+        target = "P" if color == "w" else "p"
+        sources = []
+
+        if self.squares[dest] is None:
+            one_back = dest - direction * 8
+            if 0 <= one_back < 64 and self.squares[one_back] == target:
+                sources.append((one_back, False))
+                double_push_rank = 3 if color == "w" else 4
+                if dest_rank == double_push_rank:
+                    two_back = dest - direction * 16
+                    if 0 <= two_back < 64 and self.squares[two_back] == target and self.squares[one_back] is None:
+                        sources.append((two_back, False))
+
+        if self.squares[dest] is not None or dest == self.en_passant:
+            from_rank = dest_rank - direction
+            if 0 <= from_rank < 8:
+                for df in (-1, 1):
+                    from_file = dest_file + df
+                    if 0 <= from_file < 8:
+                        idx = from_rank * 8 + from_file
+                        if self.squares[idx] == target:
+                            sources.append((idx, True))
+
+        return sources
+
     def apply(self, frm, to, promotion=None, is_en_passant=False, castle=None):
         moving_piece = self.squares[frm]
         color = "w" if moving_piece.isupper() else "b"

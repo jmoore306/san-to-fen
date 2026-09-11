@@ -7,7 +7,7 @@ through, or into check.
 
 import re
 
-from .board import square_index
+from .board import square_index, square_name
 
 _MOVE_NUMBER_RE = re.compile(r"^\d+\.+(.*)$")
 _RESULT_TOKENS = {"1-0", "0-1", "1/2-1/2", "*"}
@@ -134,3 +134,71 @@ def apply_san(board, raw_token):
     board.en_passant = trial.en_passant
     board.halfmove_clock = trial.halfmove_clock
     board.fullmove_number = trial.fullmove_number
+
+
+def _leaves_own_king_in_check(board, frm, to, color, promotion=None, is_en_passant=False):
+    trial = board.clone()
+    trial.apply(frm, to, promotion=promotion, is_en_passant=is_en_passant)
+    enemy = "b" if color == "w" else "w"
+    return trial.is_square_attacked(trial.find_king(color), enemy)
+
+
+def _disambiguator(frm, siblings):
+    """The minimal SAN disambiguation text needed to tell frm apart from
+    the other candidate squares in siblings that can reach the same
+    destination."""
+    if len(siblings) == 1:
+        return ""
+    frm_file, frm_rank = frm % 8, frm // 8
+    if sum(1 for f in siblings if f % 8 == frm_file) == 1:
+        return chr(ord("a") + frm_file)
+    if sum(1 for f in siblings if f // 8 == frm_rank) == 1:
+        return str(frm_rank + 1)
+    return square_name(frm)
+
+
+def moves_to_square(board, dest_name):
+    """The SAN for every legal move, by the side to move, that lands a
+    piece on dest_name. Raises ValueError if dest_name isn't a square."""
+    if not _SQUARE_RE.match(dest_name):
+        raise ValueError(f"invalid square '{dest_name}'")
+
+    dest = square_index(dest_name)
+    color = board.side_to_move
+    is_capture = board.squares[dest] is not None
+    results = []
+
+    for piece in "NBRQ":
+        legal = [f for f in board.find_candidates(piece, color, dest)
+                 if not _leaves_own_king_in_check(board, f, dest, color)]
+        for frm in legal:
+            disambig = _disambiguator(frm, legal)
+            results.append(f"{piece}{disambig}{'x' if is_capture else ''}{dest_name}")
+
+    for frm in board.find_candidates("K", color, dest):
+        if not _leaves_own_king_in_check(board, frm, dest, color):
+            results.append(f"K{'x' if is_capture else ''}{dest_name}")
+
+    dest_rank = dest // 8
+    promotion_rank = 7 if color == "w" else 0
+    for frm, capture in board.find_pawn_sources(color, dest):
+        is_en_passant = capture and not is_capture
+        if _leaves_own_king_in_check(board, frm, dest, color, is_en_passant=is_en_passant):
+            continue
+        prefix = f"{square_name(frm)[0]}x" if capture else ""
+        if dest_rank == promotion_rank:
+            results.extend(f"{prefix}{dest_name}={promo}" for promo in "QRBN")
+        else:
+            results.append(f"{prefix}{dest_name}")
+
+    for kingside, king_file in ((True, 6), (False, 2)):
+        home_rank = 0 if color == "w" else 7
+        if dest != home_rank * 8 + king_file:
+            continue
+        try:
+            _validate_castle_path(board, color, kingside=kingside)
+        except ValueError:
+            continue
+        results.append("O-O" if kingside else "O-O-O")
+
+    return sorted(set(results))

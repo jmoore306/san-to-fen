@@ -3,7 +3,7 @@ import json
 import sys
 
 from .board import Board
-from .notation import apply_san, split_moves
+from .notation import apply_san, moves_to_square, split_moves
 
 
 def build_arg_parser():
@@ -27,6 +27,12 @@ def build_arg_parser():
         "--from-fen",
         metavar="FEN",
         help="start from this position instead of the initial one",
+    )
+    parser.add_argument(
+        "--explain",
+        metavar="SQUARE",
+        help="after replaying the moves, list SAN for every legal move "
+             "that could put a piece on this square next",
     )
     return parser
 
@@ -77,19 +83,44 @@ def main(argv=None):
 
     fen = board.fen()
 
+    reachable_by = None
+    if args.explain is not None:
+        try:
+            reachable_by = moves_to_square(board, args.explain)
+        except ValueError as exc:
+            if args.json:
+                print(json.dumps({
+                    "ok": False,
+                    "error": f"invalid --explain value: {exc}",
+                    "failed_move": None,
+                    "moves_played": played,
+                }))
+            else:
+                print(f"invalid --explain value: {exc}", file=sys.stderr)
+            return 1
+
     if args.json:
-        print(json.dumps({
+        result = {
             "ok": True,
             "fen": fen,
             "side_to_move": board.side_to_move,
             "fullmove_number": board.fullmove_number,
             "halfmove_clock": board.halfmove_clock,
             "moves_played": played,
-        }))
+        }
+        if args.explain is not None:
+            result["explain_square"] = args.explain
+            result["reachable_by"] = reachable_by
+        print(json.dumps(result))
     else:
         print(fen)
         side = "White" if board.side_to_move == "w" else "Black"
         print(f"{side} to move, move {board.fullmove_number}")
+        if args.explain is not None:
+            if reachable_by:
+                print(f"moves that could reach {args.explain}: {', '.join(reachable_by)}")
+            else:
+                print(f"no legal move reaches {args.explain}")
 
     return 0
 
